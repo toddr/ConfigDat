@@ -1,1 +1,9 @@
 /config.dat
+/blib/*
+/pm_to_blib
+/Makefile
+/MYMETA.json
+/MYMETA.yml
+/Config.o
+/Config.xs
+/Config.c

@@ -12,6 +12,23 @@ package Config;
 our %Config;
 our $VERSION = "5.022001";
 
+BEGIN {
+    if ( defined &DynaLoader::boot_DynaLoader ) {
+        use XSLoader;
+    }
+    else {
+        %Config:: = ();
+        undef &{$_} for qw(import DESTROY AUTOLOAD);
+        require 'Config_mini.pl';
+    }
+}
+
+if ($INC{'XSLoader.pm'}) {
+    XSLoader::load 'Config', $VERSION ;
+}
+
+        
+
 # Skip @Config::EXPORT because it only contains %Config, which we special
 # case below as it's not a function. @Config::EXPORT won't change in the
 # lifetime of Perl 5.
@@ -64,103 +81,45 @@ die "$0: Perl lib version (5.22.1) doesn't match executable '$^X' version ($])"
 $^V eq 5.22.1
   or die sprintf "%s: Perl lib version (5.22.1) doesn't match executable '$^X' version (%vd)", $0, $^V;
 
-our $fh;
-
-sub fh {
-    return $fh if ($fh);
-    open( $fh, '<', 'config.dat' ) or die "Can't read config.dat: $!";
-    return $fh;
-}
-
 my $key_count    = 0;
 my $key_position = 0;
 
-sub FIRSTKEY {
-    my $self = shift;
-    $fh or fh();
+my %Config_local;
 
-    $key_position = 0;
-    if ( !$key_count ) {
-        seek( $fh, 0, 0 );
-
-        my $buffer;
-        read( $fh, $buffer, 4 );
-        $key_count = unpack( 'N', $buffer );
-    }
-    else {
-        seek( $fh, 4, 0 );    # Skip the keys bytes count and start at the beginning of the btree.
-    }
-
-    return $self->NEXTKEY();
+sub STORE {
+    $Config_local{ $_[0] } = $_[1];
 }
 
 sub SCALAR { return 1 }
 
+sub FIRSTKEY {
+    my $self = shift;
+
+    $key_count = get_key_count();
+
+    $key_position = 0;
+    return $self->NEXTKEY();
+}
+
 sub NEXTKEY {
     my $self = shift;
-    $fh or fh();
 
     return undef if ( $key_position >= $key_count );
 
-    my $buffer;
-    my $got = read( $fh, $buffer, 16 );
-    my ( $left_seek, $right_seek, $key_len, $value_seek ) = unpack( 'NNNN', $buffer );
-
-    read( $fh, $buffer, $key_len );
-    my ($key) = unpack( 'Z*', $buffer );
-
-    $key_position++;
-    return $key;
-
-    #seek($fh, 1, $key_len);
-
+    return get_key_number( $key_position++ );
 }
 
 # A key record is comprised of the following information.
-# pack('NNNNZ*', $left_seek, $right_seek, $key_len, $value_seek, $key_name);
+# pack('VVVVZ*', $left_seek, $right_seek, $key_len, $value_seek, $key_name);
 
 sub FETCH {
     my ( $self, $key ) = @_;
 
-    return if ( !defined $key );    # undef keys aren't legal.
+    return undef if ( !defined $key );    # undef keys aren't legal.
 
-    $fh or fh();
-    seek( $fh, 4, 0 );              # Skip the keys bytes count and start at the beginning of the btree.
-    my $key = find_key( $fh, $key );
-    undef $fh;
+    find_key($key);
 }
 
-# Walks the btree and finds the key.
-sub find_key {
-    my ( $fh, $key ) = @_;
-
-    my $buffer;
-    my $got = read( $fh, $buffer, 16 );
-    my ( $left_seek, $right_seek, $key_len, $value_seek ) = unpack( 'NNNN', $buffer );
-
-    read( $fh, $buffer, $key_len - 1 );
-
-    if ( $buffer eq $key ) {
-        $value_seek or return undef;
-        seek( $fh, $value_seek, 0 );
-
-        read( $fh, $buffer, 4 );
-        my ($value_len) = unpack( 'N', $buffer );
-
-        read( $fh, $buffer, $value_len );
-        return unpack( 'Z*', $buffer );
-    }
-
-    if ( $buffer gt $key ) {
-        $left_seek or return undef;
-        seek( $fh, $left_seek, 0 );
-        return find_key( $fh, $key );
-    }
-
-    $right_seek or return undef;
-    seek( $fh, $right_seek, 0 );
-    return find_key( $fh, $key );
-}
 
 sub TIEHASH {
     bless $_[1], $_[0];
@@ -169,35 +128,11 @@ sub TIEHASH {
 sub DESTROY { }
 
 sub AUTOLOAD {
+    print "WANTED: $AUTOLOAD\n";
     require 'Config_heavy.pl';
     goto \&launcher unless $Config::AUTOLOAD =~ /launcher$/;
     die "&Config::AUTOLOAD failed on $Config::AUTOLOAD";
 }
 
 # tie returns the object, so the value returned to require will be true.
-tie %Config, 'Config', {
-    archlibexp       => '/usr/local/cpanel/3rdparty/perl/522/lib64/perl5/5.22.1/x86_64-linux-64int',
-    archname         => 'x86_64-linux-64int',
-    cc               => '/usr/bin/gcc',
-    d_readlink       => 'define',
-    d_symlink        => 'define',
-    dlext            => 'so',
-    dlsrc            => 'dl_dlopen.xs',
-    dont_use_nlink   => undef,
-    exe_ext          => '',
-    inc_version_list => ' ',
-    intsize          => '4',
-    ldlibpthname     => 'LD_LIBRARY_PATH',
-    libpth           => '/usr/local/cpanel/3rdparty/perl/522/lib64 /usr/local/cpanel/3rdparty/lib64 /usr/local/lib64 /usr/local/lib /lib64 /usr/lib64 /usr/local/lib /usr/lib /lib/../lib64 /usr/lib/../lib64 /lib',
-    osname           => 'linux',
-    osvers           => '3.10.0-123.20.1.el7.x86_64',
-    path_sep         => ':',
-    privlibexp       => '/usr/local/cpanel/3rdparty/perl/522/lib64/perl5/5.22.1',
-    scriptdir        => '/usr/local/cpanel/3rdparty/perl/522/bin',
-    sitearchexp      => '/opt/cpanel/perl5/522/site_lib/x86_64-linux-64int',
-    sitelibexp       => '/opt/cpanel/perl5/522/site_lib',
-    so               => 'so',
-    useithreads      => undef,
-    usevendorprefix  => 'define',
-    version          => '5.22.1',
-};
+tie %Config, 'Config', {};

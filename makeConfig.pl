@@ -23,7 +23,7 @@ my $values_output = '';
 my $val_pos       = 0;
 foreach my $str ( sort keys %values_position ) {
     $values_position{$str} = $val_pos;
-    $values_output .= pack( 'NZ*', length($str), $str );
+    $values_output .= pack( 'VZ*', length($str), $str );
     $val_pos += $node_pointer_size + length($str) + 1;    # n + length + null byte.
 }
 
@@ -45,12 +45,12 @@ my $values_start_pos = $key_distance_so_far + 4;                                
 #Now let's walk the btree and store the jumps as pointers not array positions.
 
 # A record is comprised of the following information.
-# pack('NNNN', $left_seek, $right_seek, $key_len, $value_seek) . "$key_name";
+# pack('VVVV', $left_seek, $right_seek, $key_len, $value_seek) . "$key_name";
 
 my $btree_file = 'config.dat';
 open( my $fh, '>', $btree_file ) or die;
 
-print {$fh} pack( 'N', $config_keys );    # Store the key count for when people call keys.
+print {$fh} pack( 'V', $config_keys );    # Store the key count for when people call keys.
 foreach my $key (@$red_black_array) {
     $key->[0] = $jump_positions[ $key->[0] ] + 4 if $key->[0];
     $key->[1] = $jump_positions[ $key->[1] ] + 4 if $key->[1];
@@ -61,7 +61,7 @@ foreach my $key (@$red_black_array) {
         $key->[3] = 0;                    # undef.
     }
 
-    print {$fh} pack( 'NNNNZ*', @$key );
+    print {$fh} pack( 'VVVVZ*', @$key );
 }
 
 print {$fh} $values_output;
@@ -99,7 +99,7 @@ sub make_tree {
 }
 
 # A record is comprised of the following information.
-# pack('NNNN', $left_seek, $right_seek, $key_len, $value_seek) . "$key_name";
+# pack('VVVV', $left_seek, $right_seek, $key_len, $value_seek) . "$key_name";
 
 sub generate_tree_as_array {
     my ( $node, $array ) = @_;
