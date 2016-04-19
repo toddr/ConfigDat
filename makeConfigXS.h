@@ -8,7 +8,7 @@ use Config;
 
 my ( $keys_start, $values_start );
 
-open( my $fh, '>', 'Config.h' ) or die;
+open( my $fh, '>', 'ConfigXS.h' ) or die;
 
 print {$fh} <<"HEADER";
 

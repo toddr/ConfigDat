@@ -9,14 +9,14 @@ extern "C" {
 #include "stdio.h"
 #include "string.h"
 
-#include "Config.h"
+#include "ConfigXS.h"
 
 #ifdef __cplusplus
 }
 #endif
 
 
-MODULE = Config       PACKAGE = Config
+MODULE = ConfigXS       PACKAGE = ConfigXS
 
 PROTOTYPES: DISABLE
 

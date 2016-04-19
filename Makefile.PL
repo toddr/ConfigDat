@@ -8,13 +8,13 @@ use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 
-unlink 'Config.h';
-`$^X Config_h.PL`;
--e 'Config.h' or die("Config_h.PL didn't generate Config.h");
+unlink 'ConfigXS.h';
+`$^X makeConfigXS.h`;
+-e 'ConfigXS.h' or die("makeConfigXS.h didn't generate ConfigXS.h");
 
 WriteMakefile(
-    NAME         => "Config",
-    VERSION_FROM => 'Config.pm',
+    NAME         => "ConfigXS",
+    VERSION_FROM => 'ConfigXS.pm',
     'dist'       => {
         COMPRESS     => 'gzip -9f',
         SUFFIX       => 'gz',
