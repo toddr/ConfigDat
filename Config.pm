@@ -7,10 +7,11 @@
 
 package Config;
 
-#use strict;
-#use warnings;
+use strict;
+use warnings;
 our %Config;
 our $VERSION = "5.022001";
+our $AUTOLOAD;
 
 BEGIN {
     if ( defined &DynaLoader::boot_DynaLoader ) {
@@ -23,11 +24,9 @@ BEGIN {
     }
 }
 
-if ($INC{'XSLoader.pm'}) {
-    XSLoader::load 'Config', $VERSION ;
+if ( $INC{'XSLoader.pm'} ) {
+    XSLoader::load 'Config', $VERSION;
 }
-
-        
 
 # Skip @Config::EXPORT because it only contains %Config, which we special
 # case below as it's not a function. @Config::EXPORT won't change in the
@@ -95,7 +94,7 @@ sub SCALAR { return 1 }
 sub FIRSTKEY {
     my $self = shift;
 
-    $key_count = get_key_count();
+    $key_count = get_static_key_count();
 
     $key_position = 0;
     return $self->NEXTKEY();
@@ -104,7 +103,7 @@ sub FIRSTKEY {
 sub NEXTKEY {
     my $self = shift;
 
-    return undef if ( $key_position >= $key_count );
+    return undef if ( $key_position + 1 > $key_count );    # 0  based array so add 1.
 
     return get_key_number( $key_position++ );
 }
@@ -119,7 +118,6 @@ sub FETCH {
 
     find_key($key);
 }
-
 
 sub TIEHASH {
     bless $_[1], $_[0];

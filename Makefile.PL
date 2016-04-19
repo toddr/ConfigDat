@@ -8,13 +8,9 @@ use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 
-unlink 'config.dat';
-`$^X makeConfig.pl`;
--e 'config.dat' or die("makeConfig.pl didn't generate config.dat");
-
-unlink 'Config.xs';
-`$^X Config_xs.PL`;
--e 'Config.xs' or die("Config_xs.PL didn't generate Config.xs");
+unlink 'Config.h';
+`$^X Config_h.PL`;
+-e 'Config.h' or die("Config_h.PL didn't generate Config.h");
 
 WriteMakefile(
     NAME         => "Config",
