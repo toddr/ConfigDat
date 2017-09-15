@@ -4,6 +4,5 @@
 /Makefile
 /MYMETA.json
 /MYMETA.yml
-/Config.o
-/Config.xs
-/Config.c
+/*.o
+/*.c
