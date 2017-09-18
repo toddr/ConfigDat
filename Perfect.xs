@@ -6,6 +6,7 @@ extern "C" {
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
+#include "hv_func.h"
 
 #include "stdio.h"
 #include "handy.h"
@@ -32,7 +33,7 @@ get_perfect_minimal_hash_from_array(array_ref)
         SV **svp;
         SV *sv;
         char *str;
-        unsigned int hash_got;
+        unsigned int hash;
         unsigned int hashes_got[10000];
         unsigned int best_hash_found = 0;
         unsigned int minimal_hash_found;
@@ -40,7 +41,7 @@ get_perfect_minimal_hash_from_array(array_ref)
         
         //for loops
         unsigned int key_num;
-        unsigned int hash_to_try;
+        unsigned int hash_seed_to_try;
         unsigned int hashes_so_far;
         
     CODE:
@@ -73,20 +74,22 @@ get_perfect_minimal_hash_from_array(array_ref)
         }
         
         // find the best hash.
-        for(hash_to_try = 0; hash_to_try < MAX_HASH_SEED; hash_to_try++) {
+        for(hash_seed_to_try = 0; hash_seed_to_try < MAX_HASH_SEED; hash_seed_to_try++) {
+            printf("SEED == %u\n", hash_seed_to_try);
             for(key_num = 0; key_num < key_count; key_num++) {
                 sv = svp[key_count];
-                PERL_HASH_WITH_STATE(hash_to_try, hash_got, SvPVX_const(sv), SvCUR(sv));
-                hash_got = hash_got | mask;
+                PERL_HASH_WITH_SEED(&hash_seed_to_try, hash, SvPVX_const(sv), SvCUR(sv));
+                printf("%s (%u)= %u\n", SvPVX_const(sv), hash_seed_to_try, hash);
+                hash = hash | mask;
                 
                 // We already found something better.
-                if(hash_got >= minimal_hash_found) break;
+                if(hash >= minimal_hash_found) break;
                 
-                hashes_got[key_num] = hash_got;
+                hashes_got[key_num] = hash;
                 
                 // Have we seen this hash already?
                 for(hashes_so_far = 0; hashes_so_far < key_num; hashes_so_far++) {
-                    if(hashes_got[hashes_so_far] == hash_got) { // We already found this hash. not perfect. try a new hash.
+                    if(hashes_got[hashes_so_far] == hash) { // We already found this hash. not perfect. try a new hash.
                         goto TRYTHENEXTHASH;
                     }
                 }
